@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#8cff00">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Monster Log">
+  <meta name="description" content="Личный трекер вкусов Monster Energy">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <title>Monster Log</title>
+  <style>
+    :root { color-scheme: dark; --ink:#f6f7f2; --muted:#92978d; --panel:#121310; --line:#292b26; --acid:#8cff00; --radius:18px; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; background:#050505; touch-action:pan-x pan-y; -webkit-text-size-adjust:100%; }
+    body { margin:0; min-width:320px; background:radial-gradient(circle at 80% -5%,#203000 0,transparent 26rem),#050505; color:var(--ink); font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    button { font:inherit; }
+    .shell { width:min(1180px,100%); margin:auto; padding:0 18px 110px; }
+    .topbar { position:sticky; top:0; z-index:10; margin:0 -18px; padding:calc(12px + env(safe-area-inset-top)) 18px 12px; background:rgba(5,5,5,.86); border-bottom:1px solid rgba(255,255,255,.08); backdrop-filter:blur(18px); }
+    .topbar-inner { width:min(1144px,100%); margin:auto; display:flex; align-items:center; justify-content:space-between; gap:18px; }
+    .brand { display:flex; align-items:center; gap:10px; min-width:0; }
+    .mark { color:var(--acid); font:900 1.6rem/1 Impact,Haettenschweiler,sans-serif; letter-spacing:-5px; transform:skew(-8deg); }
+    .wordmark { font:900 1rem/1 Impact,Haettenschweiler,"Arial Narrow",sans-serif; letter-spacing:.08em; white-space:nowrap; }
+    .summary { display:flex; align-items:center; gap:10px; font-weight:800; white-space:nowrap; }
+    .summary strong { color:var(--acid); font-size:1.05rem; }
+    .summary small { display:block; color:var(--muted); font-size:.72rem; font-weight:600; }
+    .progress { width:72px; height:5px; overflow:hidden; border-radius:8px; background:#282b24; }
+    .progress > i { display:block; width:0; height:100%; background:var(--acid); transition:width .35s ease; }
+    .intro { padding:38px 0 22px; display:grid; grid-template-columns:1fr auto; align-items:end; gap:24px; }
+    .eyebrow { margin:0 0 7px; color:var(--acid); font-weight:900; font-size:.76rem; letter-spacing:.16em; text-transform:uppercase; }
+    h1 { margin:0; max-width:720px; font:900 clamp(2.3rem,7vw,5.8rem)/.92 Impact,Haettenschweiler,"Arial Narrow",sans-serif; letter-spacing:.015em; text-transform:uppercase; }
+    .total-box { min-width:150px; padding:16px 18px; border:1px solid var(--line); border-radius:16px; background:rgba(18,19,16,.82); }
+    .total-box b { display:block; font:900 2rem/1 Impact,Haettenschweiler,sans-serif; color:var(--acid); }
+    .total-box span { color:var(--muted); font-size:.82rem; }
+    .tier-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; padding:10px 12px; border:1px solid var(--line); border-radius:15px; background:rgba(18,19,16,.8); }
+    .tier-toolbar-copy { min-width:0; }
+    .tier-toolbar-copy b { display:block; font-size:.93rem; }
+    .tier-toolbar-copy span { color:var(--muted); font-size:.76rem; }
+    .tier-toggle { flex:none; min-height:42px; padding:0 15px; border:1px solid #3a3d34; border-radius:12px; background:#22251e; color:var(--ink); font-weight:850; cursor:pointer; }
+    .tier-toggle[aria-expanded="true"] { border-color:var(--acid); color:var(--acid); }
+    .tier-board { margin:0 0 26px; padding:12px; border:1px solid var(--line); border-radius:18px; background:#0d0e0c; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+    .tier-board * { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+    .tier-board[hidden] { display:none; }
+    .tier-lane { display:grid; grid-template-columns:48px 1fr; min-height:70px; border-bottom:1px solid #252720; transition:background .15s; }
+    .tier-lane.drag-over { background:rgba(140,255,0,.055); }
+    .tier-lane.drag-over .tier-empty { display:none; }
+    .tier-lane:last-of-type { border-bottom:0; }
+    .tier-letter { display:grid; place-items:center; margin:8px 0; border-radius:11px; background:color-mix(in srgb,var(--tier) 19%,#111); color:var(--tier); font:900 1.45rem/1 Impact,Haettenschweiler,sans-serif; }
+    .tier-items { display:flex; align-items:center; flex-wrap:wrap; gap:7px; padding:8px; }
+    .tier-mini { position:relative; display:flex; align-items:center; gap:8px; min-height:48px; max-width:210px; padding:4px 9px 4px 4px; border:1px solid #30332b; border-radius:11px; background:#171914; color:var(--ink); text-align:left; cursor:grab; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent; }
+    .tier-mini:active { cursor:grabbing; }
+    .tier-mini .photo { width:40px; flex:none; aspect-ratio:1; border-radius:8px; }
+    .tier-copy { min-width:0; }
+    .tier-name { display:block; overflow:hidden; font-size:.76rem; font-weight:800; line-height:1.15; text-overflow:ellipsis; }
+    .tier-mini.drag-source { opacity:.18; }
+    .tier-drag-ghost { position:fixed!important; z-index:100; max-width:none!important; margin:0; pointer-events:none; opacity:.96; box-shadow:0 18px 55px rgba(0,0,0,.68); transform-origin:center; }
+    .drop-placeholder { min-width:58px; min-height:48px; border:1px dashed var(--acid); border-radius:11px; background:rgba(140,255,0,.06); }
+    body.tier-dragging { overflow:hidden; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+    .tier-empty { color:#62665c; font-size:.8rem; }
+    .tier-board-foot { margin:9px 4px 2px 56px; color:var(--muted); font-size:.76rem; }
+    .search-panel { margin:0 0 30px; padding:16px; border:1px solid var(--line); border-radius:18px; background:linear-gradient(145deg,rgba(24,26,21,.96),rgba(13,14,12,.96)); }
+    .search-head { display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:11px; }
+    .search-head h2 { font-size:1.15rem; }
+    .search-count { color:var(--muted); font-size:.8rem; white-space:nowrap; }
+    .search-field { position:relative; }
+    .search-field input { width:100%; min-height:50px; padding:0 50px 0 15px; border:1px solid #383b33; border-radius:13px; outline:none; background:#080908; color:var(--ink); font:inherit; }
+    .search-field input::placeholder { color:#676b62; }
+    .search-field input:focus { border-color:var(--acid); box-shadow:0 0 0 3px rgba(140,255,0,.12); }
+    .search-clear { position:absolute; top:6px; right:6px; width:38px; height:38px; padding:0; border:0; border-radius:10px; background:#22251e; color:var(--ink); font-size:1.25rem; cursor:pointer; }
+    .search-clear[hidden] { display:none; }
+    .search-empty { margin:34px 0 0; padding:34px 20px; border:1px dashed #34372f; border-radius:16px; color:var(--muted); text-align:center; }
+    .section { margin-top:34px; }
+    .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:14px; border-bottom:1px solid var(--line); padding-bottom:11px; }
+    h2 { margin:0; font:900 1.55rem/1 Impact,Haettenschweiler,"Arial Narrow",sans-serif; letter-spacing:.05em; text-transform:uppercase; }
+    .section-count { color:var(--muted); font-size:.83rem; }
+    .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+    .card { position:relative; overflow:hidden; display:flex; flex-direction:column; min-width:0; border:1px solid var(--line); border-radius:var(--radius); background:linear-gradient(155deg,#181915,#0d0e0c); transition:border-color .2s,transform .2s,box-shadow .2s; }
+    .card[data-tried="true"] { border-color:color-mix(in srgb,var(--accent) 65%,#30322c); box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 20%,transparent),0 14px 34px rgba(0,0,0,.25); }
+    .photo { position:relative; overflow:hidden; width:100%; aspect-ratio:1/1.03; background:#111; }
+    .photo img { position:absolute; max-width:none; height:auto; -webkit-user-select:none; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+    .photo::after { content:""; position:absolute; inset:auto 0 0; height:30%; background:linear-gradient(transparent,rgba(10,10,9,.52)); }
+    .comment-button,.tier-badge { position:absolute; z-index:3; min-height:34px; border:1px solid rgba(255,255,255,.22); background:rgba(5,5,5,.78); color:var(--ink); backdrop-filter:blur(9px); cursor:pointer; }
+    .comment-button { top:11px; left:11px; width:36px; padding:0; border-radius:50%; font-size:1rem; }
+    .comment-button[data-has-note="true"]::after { content:""; position:absolute; top:1px; right:1px; width:8px; height:8px; border:2px solid #080908; border-radius:50%; background:var(--acid); }
+    .tier-badge { left:11px; bottom:11px; width:38px; padding:0; border-radius:10px; font-size:.95rem; font-weight:1000; }
+    .tier-badge[data-tier]:not([data-tier=""]) { border-color:color-mix(in srgb,var(--tier-color) 62%,#333); color:var(--tier-color); }
+    .note-preview { position:absolute; z-index:2; left:9px; right:9px; bottom:52px; padding:10px 11px; border:1px solid rgba(255,255,255,.16); border-radius:11px; background:rgba(6,7,6,.91); color:#e8eadf; font-size:.78rem; line-height:1.35; opacity:0; transform:translateY(8px); pointer-events:none; backdrop-filter:blur(12px); transition:opacity .18s,transform .18s; }
+    .note-preview span { display:-webkit-box; overflow:hidden; -webkit-line-clamp:3; -webkit-box-orient:vertical; }
+    .state { position:absolute; z-index:3; top:11px; right:11px; width:34px; height:34px; padding:0; display:grid; place-items:center; border:1px solid rgba(255,255,255,.23); border-radius:50%; background:rgba(5,5,5,.72); color:transparent; cursor:pointer; backdrop-filter:blur(8px); }
+    .card[data-tried="true"] .state { background:var(--accent); border-color:var(--accent); color:#050505; }
+    .state::before { content:"✓"; font-weight:1000; }
+    .card-body { display:flex; flex:1; flex-direction:column; padding:15px; }
+    .family { margin:0 0 5px; color:var(--accent); font-size:.7rem; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+    h3 { margin:0; min-height:2.55em; font-size:1rem; line-height:1.25; }
+    .controls { display:flex; align-items:center; margin-top:15px; }
+    .controls .stepper { width:100%; justify-content:space-between; }
+    .controls .stepper button { flex:1; }
+    .stepper { display:flex; align-items:center; border:1px solid var(--line); border-radius:12px; background:#080908; }
+    .stepper button { width:38px; height:40px; padding:0; border:0; background:transparent; color:var(--ink); font-size:1.3rem; cursor:pointer; }
+    .stepper button:disabled { opacity:.28; cursor:default; }
+    .count { width:28px; text-align:center; font-variant-numeric:tabular-nums; font-weight:900; }
+    button:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+    .install-note { margin:48px 0 0; padding:18px; border:1px dashed #3a3d35; border-radius:16px; color:var(--muted); text-align:center; }
+    .install-note b { color:var(--ink); }
+    .toast { position:fixed; z-index:20; left:50%; bottom:calc(20px + env(safe-area-inset-bottom)); transform:translate(-50%,130px); padding:11px 16px; border-radius:99px; background:var(--ink); color:#090a08; font-weight:850; box-shadow:0 12px 50px #000; transition:transform .25s ease; }
+    .toast.show { transform:translate(-50%,0); }
+    dialog { width:min(520px,calc(100% - 24px)); max-height:calc(100dvh - 32px); padding:0; border:1px solid #3b3e35; border-radius:21px; background:#11130f; color:var(--ink); box-shadow:0 30px 90px #000; }
+    dialog::backdrop { background:rgba(0,0,0,.72); backdrop-filter:blur(4px); }
+    .editor { position:relative; padding:24px; }
+    .editor-close { position:absolute; top:14px; right:14px; width:38px; height:38px; border:1px solid var(--line); border-radius:50%; background:#1d1f1a; color:var(--ink); font-size:1.35rem; cursor:pointer; }
+    .editor h2 { padding-right:42px; text-transform:none; }
+    .field-label { display:block; margin:22px 0 9px; color:#c7cac0; font-size:.82rem; font-weight:850; }
+    .tier-picker { display:grid; grid-template-columns:repeat(6,1fr); gap:7px; padding:0; border:0; margin:0; }
+    .tier-picker input { position:absolute; opacity:0; pointer-events:none; }
+    .tier-picker label { display:grid; place-items:center; min-height:44px; border:1px solid #34372f; border-radius:11px; background:#191b17; font-weight:900; cursor:pointer; }
+    .tier-picker input:checked + label { border-color:var(--pick); color:var(--pick); background:color-mix(in srgb,var(--pick) 14%,#171914); box-shadow:inset 0 0 0 1px var(--pick); }
+    .tier-picker input:focus-visible + label { outline:3px solid var(--acid); outline-offset:2px; }
+    textarea { width:100%; min-height:132px; resize:vertical; padding:13px; border:1px solid #34372f; border-radius:12px; outline:none; background:#090a08; color:var(--ink); font:inherit; line-height:1.45; }
+    textarea:focus { border-color:var(--acid); box-shadow:0 0 0 3px rgba(140,255,0,.12); }
+    .editor-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:17px; }
+    .editor-actions button { min-height:43px; padding:0 16px; border:1px solid #34372f; border-radius:11px; background:#20221d; color:var(--ink); font-weight:850; cursor:pointer; }
+    .editor-actions .save-profile { border-color:var(--acid); background:var(--acid); color:#071000; }
+    @media (hover:hover) { .card:hover { transform:translateY(-3px); border-color:#45483e; } .card:hover .note-preview[data-has-note="true"] { opacity:1; transform:translateY(0); } .state:hover,.stepper button:hover:not(:disabled),.tier-toggle:hover,.tier-mini:hover,.comment-button:hover,.tier-badge:hover { background:#292c24; } }
+    @media (max-width:880px) { .grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    @media (max-width:640px) {
+      .shell { padding-inline:12px; }
+      .topbar { margin-inline:-12px; padding-inline:12px; }
+      .intro { padding-top:28px; grid-template-columns:1fr; }
+      .tier-toolbar-copy span { display:none; }
+      .tier-board { padding:8px; }
+      .tier-lane { grid-template-columns:42px minmax(0,1fr); }
+      .tier-letter { min-height:72px; margin-block:7px; }
+      .tier-items { align-items:stretch; flex-direction:column; gap:7px; padding:7px; }
+      .tier-mini { width:100%; max-width:none; min-height:72px; gap:10px; padding:5px 9px 5px 5px; }
+      .tier-mini .photo { width:62px; }
+      .tier-name { display:block; overflow:visible; font-size:.86rem; line-height:1.25; text-overflow:clip; }
+      .drop-placeholder { width:100%; min-height:72px; }
+      .tier-board-foot { margin-left:50px; }
+      .search-panel { padding:13px; border-radius:15px; }
+      .total-box { display:none; }
+      h1 { font-size:clamp(2.7rem,15vw,4.6rem); }
+      .grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+      .card { border-radius:14px; }
+      .card-body { padding:12px 10px 10px; }
+      h3 { font-size:.9rem; }
+      .family { font-size:.64rem; }
+      .controls { margin-top:11px; }
+      .stepper { justify-content:space-between; }
+      .stepper button { flex:1; }
+      .wordmark { font-size:.92rem; }
+      .summary small { display:none; }
+      .progress { width:54px; }
+      .editor { padding:20px 16px calc(18px + env(safe-area-inset-bottom)); }
+    }
+    @media (max-width:365px) { .wordmark { display:none; } .shell { padding-inline:9px; } .topbar { margin-inline:-9px; } }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand"><span class="mark" aria-hidden="true">///</span><span class="wordmark">MONSTER LOG</span></div>
+        <div class="summary" aria-live="polite"><div class="progress" aria-hidden="true"><i id="progressBar"></i></div><div><strong id="triedTotal">0 / 49</strong><small>вкусов попробовано</small></div></div>
+      </div>
+    </header>
+    <main>
+      <section class="intro">
+        <div><p class="eyebrow">Личная коллекция</p><h1>Какие вкусы Monster ты уже пробовал?</h1></div>
+        <div class="total-box"><b id="canTotal">0</b><span>банок выпито</span></div>
+      </section>
+      <section class="tier-toolbar" aria-label="Тир-лист">
+        <div class="tier-toolbar-copy"><b>Мой тир-лист</b><span>Перетаскивай внутри и между тирами — от лучшего к худшему</span></div>
+        <button class="tier-toggle" id="tierToggle" type="button" aria-expanded="false" aria-controls="tierBoard">Открыть · <span id="tierRated">0</span></button>
+      </section>
+      <section class="tier-board" id="tierBoard" aria-label="Тир-лист Monster Energy" hidden></section>
+      <section class="search-panel" aria-labelledby="searchTitle">
+        <div class="search-head"><h2 id="searchTitle">Найти вкус</h2><span class="search-count" id="searchCount">49 вкусов</span></div>
+        <div class="search-field">
+          <input id="flavorSearch" type="search" placeholder="Например: Ultra Red White Blue Razz" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Поиск вкуса">
+          <button class="search-clear" id="searchClear" type="button" aria-label="Очистить поиск" hidden>×</button>
+        </div>
+      </section>
+      <div id="catalog"></div>
+      <p class="install-note"><b>На iPhone:</b> «Поделиться» → «На экран “Домой”» — и трекер будет открываться как приложение.</p>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status">Сохранено</div>
+  <dialog id="monsterDialog" aria-labelledby="dialogTitle">
+    <form class="editor" id="profileForm">
+      <button class="editor-close" id="editorClose" type="button" aria-label="Закрыть">×</button>
+      <p class="eyebrow" id="dialogEyebrow">Личная оценка</p>
+      <h2 id="dialogTitle"></h2>
+      <span class="field-label">Тир</span>
+      <fieldset class="tier-picker" id="tierPicker" aria-label="Выберите тир">
+        <input id="tier-none" type="radio" name="tier" value=""><label for="tier-none" style="--pick:#b3b6ad">—</label>
+        <input id="tier-s" type="radio" name="tier" value="S"><label for="tier-s" style="--pick:#ff4668">S</label>
+        <input id="tier-a" type="radio" name="tier" value="A"><label for="tier-a" style="--pick:#ff9f43">A</label>
+        <input id="tier-b" type="radio" name="tier" value="B"><label for="tier-b" style="--pick:#ffd93d">B</label>
+        <input id="tier-c" type="radio" name="tier" value="C"><label for="tier-c" style="--pick:#8cff00">C</label>
+        <input id="tier-d" type="radio" name="tier" value="D"><label for="tier-d" style="--pick:#56c7ff">D</label>
+      </fieldset>
+      <label class="field-label" for="noteInput">Комментарий</label>
+      <textarea id="noteInput" maxlength="600" placeholder="Что понравилось или не понравилось?"></textarea>
+      <div class="editor-actions"><button id="editorCancel" type="button">Отмена</button><button class="save-profile" type="submit">Сохранить</button></div>
+    </form>
+  </dialog>
+  <script>
+    const images = {
+      original:{src:"assets/original.png",w:1566,h:1566}, ultra:{src:"assets/ultra.png",w:1592,h:1868}, coffee:{src:"assets/coffee.png",w:1604,h:1122}, juice:{src:"assets/juice.png",w:1586,h:1114}, rehab:{src:"assets/rehab.png",w:1324,h:732}
+    };
+    const C=(id,name,family,image,x,y,w,h,accent)=>({id,name,family,image,crop:[x,y,w,h],accent});
+    const groups=[
+      {title:"Original", items:[
+        C("original-green","Original Green “OG”","Monster Energy","original",24,452,285,290,"#78dc12"),
+        C("zero-sugar","Zero Sugar","Monster Energy","original",332,452,285,290,"#75d91a"),
+        C("strawberry-shot","Strawberry Shot","Monster Energy","original",640,452,285,290,"#f23858"),
+        C("zero-strawberry-shot","Zero Sugar Strawberry Shot","Monster Energy","original",948,452,285,290,"#f23858"),
+        C("lando-norris","Lando Norris","Monster Energy","original",1256,452,285,290,"#dbf20b"),
+        C("electric-blue","Electric Blue","Monster Energy","original",24,845,285,290,"#16b7e8"),
+        C("orange-dreamsicle","Orange Dreamsicle","Monster Energy","original",332,845,285,290,"#ff931f"),
+        C("lo-carb","Lo-Carb","Monster Energy","original",640,845,285,290,"#08cff2"),
+        C("reserve-orange","Reserve Orange Dreamsicle","Monster Energy","original",948,845,285,290,"#ff7d12"),
+        C("reserve-peaches","Reserve Peaches n’ Crème","Monster Energy","original",1256,845,285,290,"#ffb38d"),
+        C("nitro-super-dry","Nitro Super Dry","Monster Energy","original",486,1236,286,292,"#c7f000"),
+        C("super-premium-import","Super-Premium Import","Monster Energy","original",794,1236,286,292,"#69db24")
+      ]},
+      {title:"Ultra · без сахара", items:[
+        C("ultra-white","Zero Ultra “White Monster”","Monster Ultra","ultra",29,374,286,294,"#d7d7d7"),
+        C("ultra-red-white-blue","Red White Blue Razz","Monster Ultra","ultra",338,374,286,294,"#ff3458"),
+        C("ultra-punk-punch","Punk Punch","Monster Ultra","ultra",646,374,286,294,"#f31b7f"),
+        C("ultra-blue-hawaiian","Blue Hawaiian","Monster Ultra","ultra",954,374,286,294,"#00cceb"),
+        C("ultra-vice-guava","Vice Guava","Monster Ultra","ultra",1263,374,286,294,"#30d6c6"),
+        C("ultra-wild-passion","Wild Passion","Monster Ultra","ultra",29,767,286,292,"#bb76bd"),
+        C("ultra-strawberry-dreams","Strawberry Dreams","Monster Ultra","ultra",338,767,286,292,"#f3a2ce"),
+        C("ultra-sunrise","Sunrise","Monster Ultra","ultra",646,767,286,292,"#ff873f"),
+        C("ultra-violet","Violet","Monster Ultra","ultra",954,767,286,292,"#9d4bd7"),
+        C("ultra-peachy-keen","Peachy Keen","Monster Ultra","ultra",1263,767,286,292,"#ff9d87"),
+        C("ultra-fantasy-ruby-red","Fantasy Ruby Red","Monster Ultra","ultra",29,1160,286,292,"#f2268a"),
+        C("ultra-paradise","Paradise","Monster Ultra","ultra",338,1160,286,292,"#74cf39"),
+        C("ultra-fiesta-mango","Fiesta Mango","Monster Ultra","ultra",646,1160,286,292,"#f1a028"),
+        C("ultra-watermelon","Watermelon","Monster Ultra","ultra",954,1160,286,292,"#ff3b55"),
+        C("ultra-rosa","Rosá","Monster Ultra","ultra",1263,1160,286,292,"#ed6ca7"),
+        C("ultra-red","Red","Monster Ultra","ultra",338,1553,286,292,"#e92a38"),
+        C("ultra-blue","Blue","Monster Ultra","ultra",646,1553,286,292,"#55a9e8"),
+        C("ultra-black","Black","Monster Ultra","ultra",954,1553,286,292,"#d2d2d2")
+      ]},
+      {title:"Coffee + Energy", items:[
+        C("java-mean-bean","Mean Bean","Java Monster","coffee",38,399,286,294,"#e7c98c"),
+        C("java-loca-moca","Loca Moca","Java Monster","coffee",346,399,286,294,"#b67545"),
+        C("java-salted-caramel","Salted Caramel","Java Monster","coffee",654,399,286,294,"#daa52b"),
+        C("java-cafe-latte","Café Latte","Java Monster","coffee",963,399,286,294,"#e9d27e"),
+        C("java-irish-creme","Irish Crème","Java Monster","coffee",1270,399,286,294,"#42c362"),
+        C("killer-loca-moca","Loca Moca","Killer Brew","coffee",500,791,286,293,"#f45a7d"),
+        C("killer-mean-bean","Mean Bean","Killer Brew","coffee",808,791,286,293,"#63c4d7")
+      ]},
+      {title:"Juice + Energy", items:[
+        C("juice-mango-loco","Mango Loco","Juice Monster","juice",30,381,285,293,"#20bce7"),
+        C("juice-voodoo-grape","Voodoo Grape","Juice Monster","juice",338,381,285,293,"#ab5ce5"),
+        C("juice-strawberry-lemonade","Strawberry Lemonade","Juice Monster","juice",646,381,285,293,"#ed1717"),
+        C("juice-pacific-punch","Pacific Punch","Juice Monster","juice",954,381,285,293,"#e9d7aa"),
+        C("juice-viking-berry","Viking Berry","Juice Monster","juice",1262,381,285,293,"#ef4f91"),
+        C("juice-bad-apple","Bad Apple","Juice Monster","juice",338,772,285,293,"#f03729"),
+        C("juice-rio-punch","Rio Punch","Juice Monster","juice",646,772,285,293,"#e4db23"),
+        C("juice-pipeline-punch","Pipeline Punch","Juice Monster","juice",954,772,285,293,"#ec4c89")
+      ]},
+      {title:"Rehab · чай + энергия", items:[
+        C("rehab-tea-lemonade","Tea + Lemonade","Rehab Monster","rehab",47,400,285,294,"#ffe100"),
+        C("rehab-peach-tea","Peach Tea","Rehab Monster","rehab",355,400,285,294,"#ff9846"),
+        C("rehab-wild-berry-tea","Wild Berry Tea","Rehab Monster","rehab",663,400,285,294,"#ea187f"),
+        C("rehab-green-tea","Green Tea","Rehab Monster","rehab",971,400,285,294,"#9de327")
+      ]}
+    ];
+    const all=groups.flatMap(g=>g.items);
+    const storageKey="monster-log:v1";
+    const profileKey="monster-log:profiles:v1";
+    const tierColors={S:"#ff4668",A:"#ff9f43",B:"#ffd93d",C:"#8cff00",D:"#56c7ff"};
+    const tierKeys=Object.keys(tierColors);
+    let counts={};
+    let profiles={tiers:{},notes:{}};
+    try { counts=JSON.parse(localStorage.getItem(storageKey)||"{}"); } catch(e) { counts={}; }
+    try { profiles={tiers:{},notes:{},...JSON.parse(localStorage.getItem(profileKey)||"{}")}; } catch(e) { profiles={tiers:{},notes:{}}; }
+    if(!profiles.tiers||typeof profiles.tiers!=="object")profiles.tiers={};
+    if(!profiles.notes||typeof profiles.notes!=="object")profiles.notes={};
+    if(!profiles.order||typeof profiles.order!=="object")profiles.order={};
+    const knownItemIds=new Set(all.map(item=>item.id)), orderedIds=new Set();
+    tierKeys.forEach(tier=>{
+      const source=Array.isArray(profiles.order[tier])?profiles.order[tier]:[];
+      profiles.order[tier]=source.filter(id=>knownItemIds.has(id)&&profiles.tiers[id]===tier&&!orderedIds.has(id)&&orderedIds.add(id));
+    });
+    all.forEach(item=>{ const tier=tierKeys.includes(profiles.tiers[item.id])?profiles.tiers[item.id]:""; if(tier&&!orderedIds.has(item.id)){profiles.order[tier].push(item.id);orderedIds.add(item.id);} });
+    const safeCount=id=>Math.max(0,Math.min(999,Number(counts[id])||0));
+    const safeTier=id=>["S","A","B","C","D"].includes(profiles.tiers?.[id])?profiles.tiers[id]:"";
+    const safeNote=id=>String(profiles.notes?.[id]||"").slice(0,600);
+    const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+    const normalizeSearch=value=>String(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ё/g,"е").replace(/&/g," ").replace(/[^a-zа-я0-9]+/g," ").trim();
+    const groupNameById=new Map(groups.flatMap(group=>group.items.map(item=>[item.id,group.title])));
+    let currentQuery="";
+    function editDistance(a,b){
+      let previous=Array.from({length:b.length+1},(_,index)=>index);
+      for(let i=1;i<=a.length;i++){
+        const current=[i];
+        for(let j=1;j<=b.length;j++)current[j]=Math.min(current[j-1]+1,previous[j]+1,previous[j-1]+(a[i-1]===b[j-1]?0:1));
+        previous=current;
+      }
+      return previous[b.length];
+    }
+    function searchTokenMatches(queryToken,candidate){
+      if(queryToken===candidate)return true;
+      if(queryToken.length>=3&&(candidate.startsWith(queryToken)||queryToken.startsWith(candidate)))return true;
+      const longest=Math.max(queryToken.length,candidate.length);
+      return longest>=4&&editDistance(queryToken,candidate)<=(longest>=8?2:1);
+    }
+    function matchesSearch(item){
+      const query=normalizeSearch(currentQuery); if(!query)return true;
+      const haystack=normalizeSearch(`${item.name} ${item.family} ${groupNameById.get(item.id)||""} ${item.id}`);
+      if(haystack.includes(query))return true;
+      const queryTokens=query.split(" "), haystackTokens=haystack.split(" ");
+      const matched=queryTokens.filter(token=>haystackTokens.some(candidate=>searchTokenMatches(token,candidate))).length;
+      const required=queryTokens.length<=2?queryTokens.length:Math.ceil(queryTokens.length*.7);
+      return matched>=required;
+    }
+    function orderedTierItems(tier){
+      const ids=profiles.order[tier]||[];
+      return ids.map(id=>all.find(item=>item.id===id)).filter(Boolean);
+    }
+    function setTier(id,tier,index){
+      const previousTier=safeTier(id), previousIndex=previousTier?(profiles.order[previousTier]||[]).indexOf(id):-1;
+      tierKeys.forEach(key=>profiles.order[key]=profiles.order[key].filter(entry=>entry!==id));
+      if(tier){
+        profiles.tiers[id]=tier;
+        const target=profiles.order[tier];
+        const requested=Number.isInteger(index)?index:(tier===previousTier&&previousIndex>=0?previousIndex:target.length);
+        const position=Math.max(0,Math.min(requested,target.length));
+        target.splice(position,0,id);
+      } else delete profiles.tiers[id];
+    }
+    function photo(item,compact=false){
+      const [x,y,w,h]=item.crop, im=images[item.image];
+      const tier=safeTier(item.id), note=safeNote(item.id);
+      const tools=compact?"":`<button class="comment-button" type="button" data-action="open-note" data-has-note="${Boolean(note)}" aria-label="Комментарий к ${item.name}" title="Комментарий">✎</button><button class="tier-badge" type="button" data-action="open-tier" data-tier="${tier}" style="--tier-color:${tierColors[tier]||"#d5d8cf"}" aria-label="Выбрать тир для ${item.name}" title="${tier?`Тир ${tier}`:"Выбрать тир"}">${tier||"+"}</button><div class="note-preview" data-has-note="${Boolean(note)}"><span>${escapeHtml(note)}</span></div>`;
+      return `<div class="photo"><img src="${im.src}" alt="Банка ${item.family} ${item.name}" draggable="false" style="width:${im.w/w*100}%;left:${-x/w*100}%;top:${-y/h*100}%">${tools}</div>`;
+    }
+    function renderCatalog(){
+      const visibleGroups=groups.map((group,index)=>({group,index,items:group.items.filter(matchesSearch)})).filter(entry=>entry.items.length);
+      const matched=visibleGroups.reduce((sum,entry)=>sum+entry.items.length,0);
+      document.getElementById("searchCount").textContent=currentQuery?`Найдено: ${matched}`:`${all.length} вкусов`;
+      document.getElementById("searchClear").hidden=!currentQuery;
+      document.getElementById("catalog").innerHTML=matched?visibleGroups.map(({group:g,index:gi,items})=>`<section class="section" aria-labelledby="group-${gi}"><div class="section-head"><h2 id="group-${gi}">${g.title}</h2><span class="section-count" data-group="${gi}"></span></div><div class="grid">${items.map(item=>{const n=safeCount(item.id),tried=n>0;return `<article class="card" data-id="${item.id}" data-tried="${tried}" style="--accent:${item.accent}">${photo(item)}<button class="state" type="button" data-action="toggle" aria-pressed="${tried}" aria-label="${tried?`Снять отметку «Пробовал» с ${item.name}`:`Отметить ${item.name} как попробованный`}" title="${tried?"Убрать отметку":"Отметить как попробованный"}"></button><div class="card-body"><p class="family">${item.family}</p><h3>${item.name}</h3><div class="controls"><div class="stepper" aria-label="Количество выпитых банок"><button type="button" data-action="minus" aria-label="Уменьшить количество" ${n===0?"disabled":""}>−</button><span class="count" aria-live="polite">${n}</span><button type="button" data-action="plus" aria-label="Увеличить количество">+</button></div></div></div></article>`}).join("")}</div></section>`).join(""):`<p class="search-empty">Ничего не нашлось. Попробуй написать часть названия или другое слово с банки.</p>`;
+    }
+    function render(){
+      renderCatalog();
+      updateSummary();
+      renderTierBoard();
+    }
+    function renderTierBoard(){
+      const rated=all.filter(item=>safeTier(item.id));
+      document.getElementById("tierRated").textContent=rated.length;
+      document.getElementById("tierBoard").innerHTML=tierKeys.map(tier=>{
+        const items=orderedTierItems(tier);
+        const content=items.length?items.map(item=>`<button class="tier-mini" type="button" data-action="open-tier-item" data-id="${item.id}" data-tier="${tier}" aria-label="${item.name}: перетащить или изменить оценку">${photo(item,true)}<span class="tier-copy"><span class="tier-name">${item.name}</span></span></button>`).join(""):`<span class="tier-empty">Пока пусто</span>`;
+        return `<div class="tier-lane" data-tier="${tier}" style="--tier:${tierColors[tier]}"><div class="tier-letter">${tier}</div><div class="tier-items">${content}</div></div>`;
+      }).join("")+`<p class="tier-board-foot">Без оценки: ${all.length-rated.length}</p>`;
+    }
+    function updateSummary(){
+      const tried=all.filter(i=>safeCount(i.id)>0).length;
+      const total=all.reduce((sum,i)=>sum+safeCount(i.id),0);
+      document.getElementById("triedTotal").textContent=`${tried} / ${all.length}`;
+      document.getElementById("canTotal").textContent=total;
+      document.getElementById("progressBar").style.width=`${tried/all.length*100}%`;
+      groups.forEach((g,gi)=>{ const done=g.items.filter(i=>safeCount(i.id)>0).length, label=document.querySelector(`[data-group="${gi}"]`); if(label)label.textContent=`${done} из ${g.items.length}`; });
+    }
+    let toastTimer;
+    function save(id,value,promptReview=false){
+      const wasTried=safeCount(id)>0;
+      counts[id]=Math.max(0,Math.min(999,value));
+      localStorage.setItem(storageKey,JSON.stringify(counts));
+      const card=document.getElementById("catalog").querySelector(`.card[data-id="${id}"]`), n=safeCount(id), tried=n>0;
+      if(card){
+        card.dataset.tried=tried;
+        card.querySelector(".count").textContent=n;
+        card.querySelector('[data-action="minus"]').disabled=!tried;
+        const toggle=card.querySelector('[data-action="toggle"]'), item=all.find(entry=>entry.id===id);
+        toggle.setAttribute("aria-pressed",tried);
+        toggle.setAttribute("aria-label",tried?`Снять отметку «Пробовал» с ${item.name}`:`Отметить ${item.name} как попробованный`);
+        toggle.title=tried?"Убрать отметку":"Отметить как попробованный";
+      }
+      updateSummary();
+      const toast=document.getElementById("toast"); toast.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove("show"),900);
+      if(promptReview&&!wasTried&&tried&&!safeTier(id)&&!safeNote(id))setTimeout(()=>openEditor(id,"tier",true),0);
+    }
+    document.getElementById("catalog").addEventListener("click",e=>{
+      const button=e.target.closest("button[data-action]"); if(!button)return;
+      const card=button.closest(".card"), id=card.dataset.id, n=safeCount(id);
+      if(button.dataset.action==="plus")save(id,n+1,true);
+      if(button.dataset.action==="minus")save(id,n-1);
+      if(button.dataset.action==="toggle")save(id,n>0?0:1,true);
+      if(button.dataset.action==="open-note")openEditor(id,"note");
+      if(button.dataset.action==="open-tier")openEditor(id,"tier");
+    });
+    const dialog=document.getElementById("monsterDialog"), noteInput=document.getElementById("noteInput"), profileForm=document.getElementById("profileForm");
+    let editingId="";
+    function openEditor(id,focusTarget="note",firstTaste=false){
+      const item=all.find(entry=>entry.id===id); if(!item)return;
+      editingId=id;
+      document.getElementById("dialogEyebrow").textContent=firstTaste?"Первое впечатление":"Личная оценка";
+      document.getElementById("dialogTitle").textContent=item.name;
+      noteInput.value=safeNote(id);
+      const tierInput=profileForm.querySelector(`input[name="tier"][value="${safeTier(id)}"]`);
+      if(tierInput)tierInput.checked=true;
+      dialog.showModal();
+      requestAnimationFrame(()=>focusTarget==="tier"?(tierInput||document.getElementById("tier-none")).focus():noteInput.focus());
+    }
+    function closeEditor(){ dialog.close(); editingId=""; }
+    document.getElementById("editorClose").addEventListener("click",closeEditor);
+    document.getElementById("editorCancel").addEventListener("click",closeEditor);
+    dialog.addEventListener("click",e=>{ if(e.target===dialog)closeEditor(); });
+    profileForm.addEventListener("submit",e=>{
+      e.preventDefault(); if(!editingId)return;
+      const tier=new FormData(profileForm).get("tier")||"", note=noteInput.value.trim();
+      setTier(editingId,tier);
+      if(note)profiles.notes[editingId]=note; else delete profiles.notes[editingId];
+      localStorage.setItem(profileKey,JSON.stringify(profiles));
+      closeEditor(); render();
+      const toast=document.getElementById("toast"); toast.textContent="Оценка сохранена"; toast.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>{toast.classList.remove("show");toast.textContent="Сохранено";},1100);
+    });
+    document.getElementById("tierToggle").addEventListener("click",()=>{
+      const board=document.getElementById("tierBoard"), button=document.getElementById("tierToggle"), open=board.hidden;
+      board.hidden=!open; button.setAttribute("aria-expanded",open); button.firstChild.textContent=open?"Скрыть · ":"Открыть · ";
+    });
+    const flavorSearch=document.getElementById("flavorSearch"), searchClear=document.getElementById("searchClear");
+    function updateSearch(value){
+      currentQuery=value.trim();
+      renderCatalog();
+      updateSummary();
+    }
+    flavorSearch.addEventListener("input",()=>updateSearch(flavorSearch.value));
+    flavorSearch.addEventListener("search",()=>updateSearch(flavorSearch.value));
+    flavorSearch.addEventListener("keydown",event=>{ if(event.key==="Escape"&&flavorSearch.value){event.preventDefault();flavorSearch.value="";updateSearch("");} });
+    searchClear.addEventListener("click",()=>{flavorSearch.value="";updateSearch("");flavorSearch.focus();});
+    const tierBoard=document.getElementById("tierBoard");
+    let tierDrag=null, suppressTierClickUntil=0;
+    function startTierDrag(event){
+      const {source,startX,startY}=tierDrag, rect=source.getBoundingClientRect();
+      const ghost=source.cloneNode(true), placeholder=document.createElement("div");
+      ghost.classList.add("tier-drag-ghost"); ghost.classList.remove("drag-source"); ghost.style.width=`${rect.width}px`; ghost.style.left=`${rect.left}px`; ghost.style.top=`${rect.top}px`;
+      placeholder.className="drop-placeholder"; placeholder.setAttribute("aria-hidden","true");
+      source.after(placeholder); source.classList.add("drag-source"); document.body.appendChild(ghost); document.body.classList.add("tier-dragging");
+      tierDrag={...tierDrag,active:true,ghost,placeholder,originRect:rect};
+      moveTierDrag(event,startX,startY);
+    }
+    function moveTierDrag(event,startX=tierDrag.startX,startY=tierDrag.startY){
+      if(!tierDrag?.active)return;
+      const {ghost,originRect,source,placeholder}=tierDrag;
+      ghost.style.transform=`translate(${event.clientX-startX}px,${event.clientY-startY}px) scale(1.03)`;
+      const hit=document.elementFromPoint(event.clientX,event.clientY);
+      const mobile=matchMedia("(max-width:640px)").matches;
+      const lanes=[...document.querySelectorAll(".tier-lane")];
+      const lane=hit?.closest(".tier-lane")||(mobile?lanes.find(item=>{const rect=item.getBoundingClientRect();return event.clientY>=rect.top-14&&event.clientY<=rect.bottom+14;}):null);
+      document.querySelectorAll(".tier-lane.drag-over").forEach(item=>item.classList.remove("drag-over"));
+      if(!lane)return;
+      lane.classList.add("drag-over");
+      const container=lane.querySelector(".tier-items");
+      if(mobile){
+        const items=[...container.querySelectorAll(".tier-mini")].filter(item=>item!==source);
+        const next=items.find(item=>{const rect=item.getBoundingClientRect();return event.clientY<rect.top+rect.height/2;});
+        container.insertBefore(placeholder,next||null);
+        return;
+      }
+      const target=hit?.closest(".tier-mini");
+      if(target&&target!==source){
+        const rect=target.getBoundingClientRect();
+        container.insertBefore(placeholder,event.clientX<rect.left+rect.width/2?target:target.nextSibling);
+      } else if(!target) container.appendChild(placeholder);
+    }
+    function cleanupTierDrag(){
+      if(!tierDrag)return;
+      tierDrag.ghost?.remove(); tierDrag.placeholder?.remove(); tierDrag.source?.classList.remove("drag-source");
+      document.body.classList.remove("tier-dragging"); document.querySelectorAll(".tier-lane.drag-over").forEach(item=>item.classList.remove("drag-over")); tierDrag=null;
+    }
+    function finishTierDrag(cancel=false){
+      if(!tierDrag)return;
+      if(!tierDrag.active){cleanupTierDrag();return;}
+      const {id,source,placeholder}=tierDrag, lane=placeholder.closest(".tier-lane");
+      if(!cancel&&lane){
+        const siblings=[...lane.querySelector(".tier-items").children].filter(element=>element===placeholder||(element.matches?.(".tier-mini")&&element!==source));
+        setTier(id,lane.dataset.tier,siblings.indexOf(placeholder));
+        localStorage.setItem(profileKey,JSON.stringify(profiles));
+      }
+      suppressTierClickUntil=Date.now()+350; cleanupTierDrag(); render();
+      if(!cancel&&lane){ const toast=document.getElementById("toast"); toast.textContent="Тир-лист обновлён"; toast.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>{toast.classList.remove("show");toast.textContent="Сохранено";},1000); }
+    }
+    tierBoard.addEventListener("pointerdown",event=>{
+      const source=event.target.closest(".tier-mini"); if(!source||(event.pointerType==="mouse"&&event.button!==0))return;
+      if(event.pointerType!=="mouse")event.preventDefault();
+      tierDrag={source,id:source.dataset.id,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,active:false};
+      try{source.setPointerCapture(event.pointerId);}catch(error){}
+    });
+    tierBoard.addEventListener("pointermove",event=>{
+      if(!tierDrag||event.pointerId!==tierDrag.pointerId)return;
+      if(!tierDrag.active&&Math.hypot(event.clientX-tierDrag.startX,event.clientY-tierDrag.startY)>6)startTierDrag(event);
+      if(tierDrag?.active){event.preventDefault();moveTierDrag(event);}
+    });
+    tierBoard.addEventListener("pointerup",event=>{
+      if(!tierDrag||event.pointerId!==tierDrag.pointerId)return;
+      if(!tierDrag.active&&event.pointerType!=="mouse"){
+        const id=tierDrag.id; suppressTierClickUntil=Date.now()+350; cleanupTierDrag(); openEditor(id,"tier"); return;
+      }
+      finishTierDrag(false);
+    });
+    tierBoard.addEventListener("pointercancel",event=>{ if(tierDrag&&event.pointerId===tierDrag.pointerId)finishTierDrag(true); });
+    tierBoard.addEventListener("selectstart",event=>{ if(event.target.closest?.(".tier-mini"))event.preventDefault(); });
+    tierBoard.addEventListener("contextmenu",event=>{ if(event.target.closest?.(".tier-mini"))event.preventDefault(); });
+    tierBoard.addEventListener("dragstart",event=>{ if(event.target.closest?.(".tier-mini"))event.preventDefault(); });
+    tierBoard.addEventListener("click",e=>{ if(Date.now()<suppressTierClickUntil)return; const button=e.target.closest('[data-action="open-tier-item"]'); if(button)openEditor(button.dataset.id,"tier"); });
+    render();
+    function registerWebMCP(){
+      const context=document.modelContext;
+      if(!context?.registerTool)return;
+      const knownIds=new Set(all.map(item=>item.id));
+      const summary=()=>({flavorsTried:all.filter(item=>safeCount(item.id)>0).length,totalFlavors:all.length,cansDrunk:all.reduce((sum,item)=>sum+safeCount(item.id),0)});
+      Promise.resolve(context.registerTool({
+        name:"get_monster_collection_summary",
+        title:"Статистика коллекции Monster",
+        description:"Показывает число попробованных вкусов и общее количество выпитых банок.",
+        inputSchema:{type:"object",properties:{},additionalProperties:false},
+        annotations:{readOnlyHint:true,untrustedContentHint:false},
+        execute:()=>summary()
+      })).catch(()=>{});
+      Promise.resolve(context.registerTool({
+        name:"set_monster_counts",
+        title:"Обновить счётчики Monster",
+        description:"Устанавливает количество выпитых банок для одного или нескольких вкусов и обновляет коллекцию на экране.",
+        inputSchema:{type:"object",properties:{items:{type:"array",minItems:1,items:{type:"object",properties:{id:{type:"string"},count:{type:"integer",minimum:0,maximum:999}},required:["id","count"],additionalProperties:false}}},required:["items"],additionalProperties:false},
+        annotations:{readOnlyHint:false,untrustedContentHint:false},
+        execute:input=>{
+          if(!input||!Array.isArray(input.items)||input.items.length===0)throw new Error("Нужен непустой список items.");
+          const updates=input.items.map(entry=>{
+            if(!entry||!knownIds.has(entry.id)||!Number.isInteger(entry.count)||entry.count<0||entry.count>999)throw new Error("Некорректный id или count.");
+            return entry;
+          });
+          updates.forEach(entry=>save(entry.id,entry.count));
+          return {updated:updates.length,...summary()};
+        }
+      })).catch(()=>{});
+    }
+    registerWebMCP();
+    if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("/sw.js"));
+  </script>
+</body>
+</html>
