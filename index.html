@@ -8,9 +8,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Monster Log">
   <meta name="description" content="Личный трекер вкусов Monster Energy">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" type="image/svg+xml" href="/icon.svg">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <title>Monster Log</title>
   <style>
     :root { color-scheme: dark; --ink:#f6f7f2; --muted:#92978d; --panel:#121310; --line:#292b26; --acid:#8cff00; --radius:18px; }
@@ -548,7 +548,7 @@
       })).catch(()=>{});
     }
     registerWebMCP();
-    if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("/sw.js"));
+    if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));
   </script>
 </body>
 </html>
